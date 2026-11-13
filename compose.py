@@ -4,18 +4,17 @@ Compose the final entry image for ai-happy-01.
 Layout (1024x1024):
   - Top ~45%: warm wooden wall with a piece of lined paper taped to it.
     The paper has a handwritten letter (Caveat font).
-  - Bottom ~55%: wooden desk surface with a printed photo of the sloth Milo
-    (sloth-35.jpg) placed like a polaroid — cream border, soft shadow.
+  - Bottom ~55%: wooden desk surface with a printed photo of the penguin Pip
+    (candidates/penguin-3.jpg) placed like a polaroid — cream border, soft shadow.
 
 Letter text (exact):
 dear judge,
-i started this letter in 2019.
-i finished it today. that is fast for me.
-i knitted you a scarf. it is 2 inches long.
-i worked on it every single day.
-love, milo
-p.s. i will finish the scarf by 2031. do not rush me.
-p.p.s. you are my only friend. i have had exactly one friend. it is you.
+i cannot fly. so i folded you a paper plane.
+it flew 3 feet. that is a penguin world record.
+i cried. then i folded another one.
+love, pip
+p.s. the second one flew 4 feet. i am basically a bird now.
+p.p.s. please do not tell the seagulls.
 """
 
 import math
@@ -25,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 OUTPUT = "entry.png"
 W, H = 1024, 1024
-TURTLE_SRC = "candidates/sloth-35.jpg"
+TURTLE_SRC = "candidates/penguin-3.jpg"
 
 # ---- Colour palette ----
 WALL_COLOR   = (215, 180, 135)
@@ -140,7 +139,7 @@ def main():
         font_small = font
 
     # 2. Load turtle photo
-    print(f"  Loading sloth photo: {TURTLE_SRC}")
+    print(f"  Loading penguin photo: {TURTLE_SRC}")
     turtle_img = Image.open(TURTLE_SRC).convert("RGB")
     tw, th = turtle_img.size
     print(f"    Original: {tw}x{th}")
@@ -186,13 +185,12 @@ def main():
     # 6. Letter text
     letter_text = (
         "dear judge,\n\n"
-        "i started this letter in 2019.\n\n"
-        "i finished it today. that is fast for me.\n\n"
-        "i knitted you a scarf. it is 2 inches long.\n\n"
-        "i worked on it every single day.\n\n"
-        "love, milo\n"
-        "p.s. i will finish the scarf by 2031. do not rush me.\n"
-        "p.p.s. you are my only friend. i have had exactly one friend. it is you."
+        "i cannot fly. so i folded you a paper plane.\n\n"
+        "it flew 3 feet. that is a penguin world record.\n\n"
+        "i cried. then i folded another one.\n\n"
+        "love, pip\n"
+        "p.s. the second one flew 4 feet. i am basically a bird now.\n"
+        "p.p.s. please do not tell the seagulls."
     )
 
     text_x = px + 38
@@ -219,8 +217,8 @@ def main():
     draw_tape(draw, px + pw - 90, py - 4, 60, 22, angle=3)
     
 
-    # 8. Sloth photo on desk (polaroid-style)
-    print("  Placing sloth photo on desk...")
+    # 8. Penguin photo on desk (polaroid-style)
+    print("  Placing penguin photo on desk...")
     # Scale: make it ~520px wide, keep aspect
     photo_w = 560
     aspect = th / tw

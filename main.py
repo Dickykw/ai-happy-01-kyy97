@@ -69,6 +69,13 @@ def main():
         print(f"  Run 'python3 compose.py' again to regenerate it.")
         sys.exit(1)
 
+    # Pre-validate source image before copying
+    print(f"Pre-validating source '{SRC}'...")
+    if not validate_image(SRC):
+        print(f"ERROR: source image '{SRC}' failed validation — cannot proceed.")
+        print(f"  Run 'python3 compose.py' to regenerate a valid entry image.")
+        sys.exit(1)
+
     # Create output directory
     os.makedirs(out_dir, exist_ok=True)
 
