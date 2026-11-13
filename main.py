@@ -1,97 +1,68 @@
 #!/usr/bin/env python3
-"""Entrypoint for ai-happy-01. Copies entry.png to output directory."""
+"""
+Entrypoint for ai-happy-01.
+Copies entry.png to the output directory and validates it.
+"""
 
 import os
-import sys
 import shutil
+import sys
+from PIL import Image
 
 SRC = "entry.png"
 
 
-def validate_image(path: str) -> bool:
-    """Validate the image meets competition constraints."""
+def validate(path: str) -> bool:
+    """Validate that the output file meets all constraints."""
     try:
-        from PIL import Image
-    except ImportError:
-        print("  WARNING: PIL not available, skipping image validation")
-        return True
-
-    try:
+        size = os.path.getsize(path)
         img = Image.open(path)
+        w, h = img.size
+        fmt = img.format
     except Exception as e:
-        print(f"  FAIL: cannot open image: {e}")
+        print(f"  VALIDATION FAILED: {e}")
         return False
 
-    w, h = img.size
-    size = os.path.getsize(path)
-    fmt = img.format
+    checks = []
+    # Max 1 MiB
+    size_ok = size <= 1_048_576
+    checks.append(("size ≤ 1 MiB", f"{size/1024:.1f} KB", size_ok))
+    # Max 1024x1024
+    dim_ok = w <= 1024 and h <= 1024
+    checks.append(("dimensions ≤ 1024x1024", f"{w}x{h}", dim_ok))
+    # Must be PNG or JPEG
+    fmt_ok = fmt in ("PNG", "JPEG", "JPG")
+    checks.append(("format PNG/JPEG", str(fmt), fmt_ok))
 
-    print(f"  Image: {path}")
-    print(f"    Format: {fmt}")
-    print(f"    Dimensions: {w}x{h}")
-    print(f"    File size: {size} bytes ({size / 1024:.1f} KB)")
+    all_ok = True
+    for label, value, passed in checks:
+        status = "PASS" if passed else "FAIL"
+        print(f"  [{status}] {label}: {value}")
+        if not passed:
+            all_ok = False
 
-    ok = True
-    if w > 1024 or h > 1024:
-        print(f"    FAIL: dimensions {w}x{h} exceed 1024x1024")
-        ok = False
-    else:
-        print(f"    Dimensions OK (<=1024x1024)")
-
-    if fmt not in ("PNG", "JPEG", "JPG"):
-        print(f"    FAIL: format {fmt} is not PNG or JPEG")
-        ok = False
-    else:
-        print(f"    Format OK (PNG/JPEG)")
-
-    if size > 1 * 1024 * 1024:
-        print(f"    FAIL: file size {size} bytes exceeds 1 MiB")
-        ok = False
-    else:
-        print(f"    Size OK (<=1 MiB)")
-
-    return ok
+    return all_ok
 
 
 def main():
-    # Determine output directory
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    out_path = os.path.join(out_dir, "entry.png")
-
-    # Check source exists and is non-empty
-    if not os.path.exists(SRC):
-        print(f"ERROR: source image '{SRC}' not found!")
-        print(f"  Run 'python3 compose.py' first to generate the entry image.")
-        print(f"  Expected path: {os.path.abspath(SRC)}")
-        sys.exit(1)
-    if os.path.getsize(SRC) == 0:
-        print(f"ERROR: source image '{SRC}' is empty (0 bytes)!")
-        print(f"  Run 'python3 compose.py' again to regenerate it.")
-        sys.exit(1)
-
-    # Pre-validate source image before copying
-    print(f"Pre-validating source '{SRC}'...")
-    if not validate_image(SRC):
-        print(f"ERROR: source image '{SRC}' failed validation — cannot proceed.")
-        print(f"  Run 'python3 compose.py' to regenerate a valid entry image.")
-        sys.exit(1)
-
-    # Create output directory
     os.makedirs(out_dir, exist_ok=True)
+    dst = os.path.join(out_dir, "entry.png")
 
-    # Copy
-    src_size = os.path.getsize(SRC)
-    shutil.copy2(SRC, out_path)
-    dst_size = os.path.getsize(out_path)
-
-    print(f"Copied {SRC} ({src_size} bytes) -> {out_path} ({dst_size} bytes)")
-
-    # Validate
-    if validate_image(out_path):
-        print("Validation PASSED")
-    else:
-        print("Validation FAILED")
+    if not os.path.isfile(SRC):
+        print(f"ERROR: source file '{SRC}' not found in {os.getcwd()}")
         sys.exit(1)
+
+    src_size = os.path.getsize(SRC)
+    shutil.copy2(SRC, dst)
+    dst_size = os.path.getsize(dst)
+
+    print(f"Copied {SRC} ({src_size} bytes) -> {dst} ({dst_size} bytes)")
+
+    if not validate(dst):
+        sys.exit(1)
+
+    print("Done.")
 
 
 if __name__ == "__main__":

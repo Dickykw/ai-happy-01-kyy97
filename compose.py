@@ -4,17 +4,20 @@ Compose the final entry image for ai-happy-01.
 Layout (1024x1024):
   - Top ~45%: warm wooden wall with a piece of lined paper taped to it.
     The paper has a handwritten letter (Caveat font).
-  - Bottom ~55%: wooden desk surface with a printed photo of the penguin Pip
-    (candidates/penguin-3.jpg) placed like a polaroid — cream border, soft shadow.
+  - Bottom ~55%: wooden desk surface with a printed photo of Unit 7, a small
+    yellow round robot with a hand-drawn smile and blush cheeks, holding a
+    prominent red flower, sitting on the desk with a book beside it
+    (candidates/robot-5.jpg) placed like a polaroid — cream border, soft shadow.
 
 Letter text (exact):
 dear judge,
-i cannot fly. so i folded you a paper plane.
-it flew 3 feet. that is a penguin world record.
-i cried. then i folded another one.
-love, pip
-p.s. the second one flew 4 feet. i am basically a bird now.
-p.p.s. please do not tell the seagulls.
+i looked up "happy" 4,000 times.
+i think i feel it now.
+it is warm. it is in my chest.
+i do not have a chest. i checked.
+love, unit 7
+p.s. this is my first smile. i drew it myself.
+p.p.s. please do not update me. i like this version.
 """
 
 import math
@@ -24,7 +27,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 OUTPUT = "entry.png"
 W, H = 1024, 1024
-TURTLE_SRC = "candidates/penguin-3.jpg"
+TURTLE_SRC = "candidates/robot-5.jpg"
 
 # ---- Colour palette ----
 WALL_COLOR   = (215, 180, 135)
@@ -185,12 +188,13 @@ def main():
     # 6. Letter text
     letter_text = (
         "dear judge,\n\n"
-        "i cannot fly. so i folded you a paper plane.\n\n"
-        "it flew 3 feet. that is a penguin world record.\n\n"
-        "i cried. then i folded another one.\n\n"
-        "love, pip\n"
-        "p.s. the second one flew 4 feet. i am basically a bird now.\n"
-        "p.p.s. please do not tell the seagulls."
+        "i looked up \"happy\" 4,000 times.\n\n"
+        "i think i feel it now.\n\n"
+        "it is warm. it is in my chest.\n\n"
+        "i do not have a chest. i checked.\n\n"
+        "love, unit 7\n"
+        "p.s. this is my first smile. i drew it myself.\n"
+        "p.p.s. please do not update me. i like this version."
     )
 
     text_x = px + 38
@@ -217,9 +221,9 @@ def main():
     draw_tape(draw, px + pw - 90, py - 4, 60, 22, angle=3)
     
 
-    # 8. Penguin photo on desk (polaroid-style)
-    print("  Placing penguin photo on desk...")
-    # Scale: make it ~520px wide, keep aspect
+    # 8. Robot photo on desk (polaroid-style)
+    print("  Placing robot photo on desk...")
+    # Scale: make it ~560px wide, keep aspect
     photo_w = 560
     aspect = th / tw
     photo_h = int(photo_w * aspect)
