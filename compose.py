@@ -131,8 +131,8 @@ def main():
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
         print(f"  Caveat not found, fallback to {font_path}")
     try:
-        font = ImageFont.truetype(font_path, 33)
-        font_small = ImageFont.truetype(font_path, 28)
+        font = ImageFont.truetype(font_path, 30)
+        font_small = ImageFont.truetype(font_path, 26)
         print(f"  Font: {font_path}")
     except Exception as e:
         print(f"  Font error: {e}, using default")
@@ -196,7 +196,7 @@ def main():
     )
 
     text_x = px + 38
-    text_y = py + 30
+    text_y = py + 20
     text_max_w = pw - 76
 
     tmp_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
@@ -206,13 +206,13 @@ def main():
     y = text_y
     for line in lines:
         if line == "":
-            y += 34
+            y += 30
             continue
         f = font_small if line.startswith("p.") else font
         jx = random.randint(-2, 3)
         jy = random.randint(-1, 2)
         draw.text((text_x + jx, y + jy), line, fill=INK_COLOR, font=f)
-        y += 34
+        y += 30
 
     # 7. Tape strips
     draw_tape(draw, px + 30, py - 4, 60, 22, angle=-3)
