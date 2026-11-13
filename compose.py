@@ -217,7 +217,7 @@ def main():
     # 7. Tape strips
     draw_tape(draw, px + 30, py - 4, 60, 22, angle=-3)
     draw_tape(draw, px + pw - 90, py - 4, 60, 22, angle=3)
-    draw_tape(draw, px + pw // 2 - 30, py + ph - 16, 60, 22, angle=1)
+    
 
     # 8. Sloth photo on desk (polaroid-style)
     print("  Placing sloth photo on desk...")
