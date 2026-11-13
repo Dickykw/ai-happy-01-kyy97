@@ -1,65 +1,106 @@
 #!/usr/bin/env python3
 """
 Entrypoint for ai-happy-01 (make.fun competition).
-Copies entry.png to the output directory and validates it.
+Copies the composed entry.png to $MAKEFUN_OUTPUT_DIR (or /output/entry.png)
+and validates the copied file: size <= 1 MiB, dimensions <= 1024x1024,
+format PNG or JPEG.
 """
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
-SRC = "entry.png"
-
-
-def validate_image(path: str) -> bool:
-    """Check that the image is PNG/JPEG, <= 1024x1024, <= 1 MiB."""
+try:
     from PIL import Image
+except ImportError:
+    Image = None
 
-    size = os.path.getsize(path)
-    if size > 1_048_576:
-        print(f"  FAIL: file size {size} bytes exceeds 1 MiB")
-        return False
+SOURCE = "entry.png"
+DEFAULT_OUTPUT_DIR = "/output"
+MAX_BYTES = 1 * 1024 * 1024  # 1 MiB
+MAX_DIM = 1024
+ALLOWED_FORMATS = {"PNG", "JPEG"}
 
-    img = Image.open(path)
-    w, h = img.size
-    if w > 1024 or h > 1024:
-        print(f"  FAIL: dimensions {w}x{h} exceed 1024x1024")
-        return False
 
-    if img.format not in ("PNG", "JPEG", "JPG"):
-        print(f"  FAIL: format {img.format} is not PNG or JPEG")
-        return False
+def validate(path: Path):
+    """Return a list of problems; empty list means the output is valid."""
+    problems = []
 
-    print(f"  OK: {img.format} {w}x{h}, {size} bytes ({size/1024:.1f} KB)")
-    return True
+    size = path.stat().st_size
+    if size > MAX_BYTES:
+        problems.append(
+            f"too large: {size:,} bytes > {MAX_BYTES:,} bytes (1 MiB)"
+        )
+
+    if Image is None:
+        problems.append("PIL not installed - cannot verify dimensions/format")
+        return problems
+
+    try:
+        with Image.open(path) as img:
+            w, h = img.size
+            fmt = (img.format or "").upper()
+            if w > MAX_DIM or h > MAX_DIM:
+                problems.append(
+                    f"dimensions {w}x{h} exceed {MAX_DIM}x{MAX_DIM}"
+                )
+            if fmt not in ALLOWED_FORMATS:
+                problems.append(f"format {fmt} not in {ALLOWED_FORMATS}")
+    except Exception as exc:  # corrupt/truncated file
+        problems.append(f"cannot open as image: {exc}")
+
+    return problems
 
 
 def main():
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    dest = os.path.join(out_dir, "entry.png")
-
-    # Create output dir if needed
-    os.makedirs(out_dir, exist_ok=True)
-
-    # Check source exists
-    if not os.path.exists(SRC):
-        print(f"ERROR: source file '{SRC}' not found in {os.getcwd()}")
-        print(f"  Files in cwd: {[f for f in os.listdir('.') if f.endswith(('.png','.jpg','.jpeg'))]}")
+    # ---- resolve source ----
+    src = Path(__file__).resolve().parent / SOURCE
+    if not src.exists():
+        print(f"ERROR: source image not found: {src}")
+        print("Run compose.py first to generate entry.png.")
         sys.exit(1)
 
-    src_size = os.path.getsize(SRC)
-    print(f"Source: {SRC} ({src_size} bytes)")
+    # Validate the source *before* copying, so a stale or broken
+    # entry.png can never silently reach the output directory.
+    src_problems = validate(src)
+    if src_problems:
+        print(f"ERROR: source image {src} is not usable:")
+        for p in src_problems:
+            print(f"  - {p}")
+        print("Re-run compose.py to regenerate entry.png.")
+        sys.exit(1)
+    print(f"Source image OK: {src}")
 
-    # Copy
-    import shutil
-    shutil.copy2(SRC, dest)
-    print(f"Copied to: {dest}")
+    # ---- resolve destination dir ----
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", DEFAULT_OUTPUT_DIR))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / SOURCE
 
-    # Validate
-    if not validate_image(dest):
+    # ---- copy ----
+    shutil.copy2(src, dest)
+    print(f"Copied {src} -> {dest}")
+    print(f"  source size: {src.stat().st_size:,} bytes")
+    print(f"  dest   size: {dest.stat().st_size:,} bytes")
+
+    # ---- validate copied output ----
+    problems = validate(dest)
+    if problems:
+        print("VALIDATION FAILED:")
+        for p in problems:
+            print(f"  - {p}")
         sys.exit(1)
 
-    print("Entry ready.")
+    if Image is not None:
+        with Image.open(dest) as img:
+            print(
+                f"VALIDATION OK: {img.format} "
+                f"{img.size[0]}x{img.size[1]}, "
+                f"{dest.stat().st_size:,} bytes (<= 1 MiB)"
+            )
+    else:
+        print("VALIDATION OK: size within limits (PIL unavailable, "
+              "dimensions/format not checked)")
 
 
 if __name__ == "__main__":

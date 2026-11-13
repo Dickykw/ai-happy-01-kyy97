@@ -10,11 +10,10 @@ Layout (1024x1024):
 Letter text (exact):
 dear judge,
 i am a turtle. i walked 3 weeks to bring you this flower.
-you look at pictures all day. you never get a real one.
-so i brought you one. you are welcome.
+you never get a real one. so i brought you one.
 love, shelby
-p.s. i wore it on my head the whole way. everyone stared. i looked great.
-p.p.s. i live on your desk now. i am very slow. you will not notice me for months.
+p.s. i wore it on my head. i looked great.
+p.p.s. i live here now. i am slow. you will not notice me.
 """
 
 import math
@@ -130,8 +129,8 @@ def main():
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
         print(f"  Caveat not found, fallback to {font_path}")
     try:
-        font = ImageFont.truetype(font_path, 28)
-        font_small = ImageFont.truetype(font_path, 24)
+        font = ImageFont.truetype(font_path, 33)
+        font_small = ImageFont.truetype(font_path, 28)
         print(f"  Font: {font_path}")
     except Exception as e:
         print(f"  Font error: {e}, using default")
@@ -186,11 +185,10 @@ def main():
     letter_text = (
         "dear judge,\n\n"
         "i am a turtle. i walked 3 weeks to bring you this flower.\n\n"
-        "you look at pictures all day. you never get a real one.\n"
-        "so i brought you one. you are welcome.\n\n"
+        "you never get a real one. so i brought you one.\n\n"
         "love, shelby\n"
-        "p.s. i wore it on my head the whole way. everyone stared. i looked great.\n"
-        "p.p.s. i live on your desk now. i am very slow. you will not notice me for months."
+        "p.s. i wore it on my head. i looked great.\n"
+        "p.p.s. i live here now. i am slow. you will not notice me."
     )
 
     text_x = px + 38
@@ -220,7 +218,7 @@ def main():
     # 8. Turtle photo on desk (polaroid-style)
     print("  Placing turtle photo on desk...")
     # Scale: make it ~520px wide, keep aspect
-    photo_w = 520
+    photo_w = 560
     aspect = th / tw
     photo_h = int(photo_w * aspect)
 
