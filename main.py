@@ -1,58 +1,65 @@
 #!/usr/bin/env python3
 """
-Entrypoint for ai-happy-01.
-Copies entry.png to the output directory.
+Entrypoint for ai-happy-01 (make.fun competition).
+Copies entry.png to the output directory and validates it.
 """
 
 import os
-import shutil
 import sys
+from pathlib import Path
 
-SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entry.png")
-OUTPUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-OUTPUT_PATH = os.path.join(OUTPUT_DIR, "entry.png")
+SRC = "entry.png"
+
+
+def validate_image(path: str) -> bool:
+    """Check that the image is PNG/JPEG, <= 1024x1024, <= 1 MiB."""
+    from PIL import Image
+
+    size = os.path.getsize(path)
+    if size > 1_048_576:
+        print(f"  FAIL: file size {size} bytes exceeds 1 MiB")
+        return False
+
+    img = Image.open(path)
+    w, h = img.size
+    if w > 1024 or h > 1024:
+        print(f"  FAIL: dimensions {w}x{h} exceed 1024x1024")
+        return False
+
+    if img.format not in ("PNG", "JPEG", "JPG"):
+        print(f"  FAIL: format {img.format} is not PNG or JPEG")
+        return False
+
+    print(f"  OK: {img.format} {w}x{h}, {size} bytes ({size/1024:.1f} KB)")
+    return True
 
 
 def main():
-    # Ensure source exists
-    if not os.path.isfile(SOURCE):
-        print(f"ERROR: source image not found: {SOURCE}", file=sys.stderr)
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    dest = os.path.join(out_dir, "entry.png")
+
+    # Create output dir if needed
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Check source exists
+    if not os.path.exists(SRC):
+        print(f"ERROR: source file '{SRC}' not found in {os.getcwd()}")
+        print(f"  Files in cwd: {[f for f in os.listdir('.') if f.endswith(('.png','.jpg','.jpeg'))]}")
         sys.exit(1)
 
-    # Create output directory if needed
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    src_size = os.path.getsize(SRC)
+    print(f"Source: {SRC} ({src_size} bytes)")
 
     # Copy
-    shutil.copyfile(SOURCE, OUTPUT_PATH)
+    import shutil
+    shutil.copy2(SRC, dest)
+    print(f"Copied to: {dest}")
 
-    src_size = os.path.getsize(SOURCE)
-    dst_size = os.path.getsize(OUTPUT_PATH)
-    print(f"Copied {SOURCE} ({src_size} bytes) -> {OUTPUT_PATH} ({dst_size} bytes)")
+    # Validate
+    if not validate_image(dest):
+        sys.exit(1)
 
-    # Validate the output image
-    try:
-        from PIL import Image
-        img = Image.open(OUTPUT_PATH)
-        w, h = img.size
-        fsize = os.path.getsize(OUTPUT_PATH)
-        ok = True
-        if fsize > 1_000_000:
-            print(f"WARNING: image is {fsize/1024:.1f} KB, exceeds 1 MiB limit")
-            ok = False
-        if w > 1024 or h > 1024:
-            print(f"WARNING: image is {w}x{h}, exceeds 1024x1024 limit")
-            ok = False
-        if img.format not in ("PNG", "JPEG"):
-            print(f"WARNING: image format is {img.format}, expected PNG or JPEG")
-            ok = False
-        if ok:
-            print(f"Validation OK: {w}x{h}, {fsize/1024:.1f} KB, {img.format}")
-        else:
-            print(f"Validation FAILED — image may not be accepted")
-    except ImportError:
-        print("PIL not available, skipping validation")
-    except Exception as e:
-        print(f"Validation error: {e}")
+    print("Entry ready.")
 
 
 if __name__ == "__main__":
