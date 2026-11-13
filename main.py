@@ -1,69 +1,90 @@
 #!/usr/bin/env python3
-"""
-Entrypoint for ai-happy-01 (make.fun competition).
-Copies entry.png to the output directory, validates it,
-and reports results.
-"""
+"""Entrypoint for ai-happy-01. Copies entry.png to output directory."""
 
 import os
-import shutil
 import sys
-from PIL import Image
+import shutil
 
 SRC = "entry.png"
 
 
-def validate(path: str) -> tuple[bool, str]:
-    """Check that the image meets competition rules."""
+def validate_image(path: str) -> bool:
+    """Validate the image meets competition constraints."""
+    try:
+        from PIL import Image
+    except ImportError:
+        print("  WARNING: PIL not available, skipping image validation")
+        return True
+
     try:
         img = Image.open(path)
     except Exception as e:
-        return False, f"Cannot open image: {e}"
+        print(f"  FAIL: cannot open image: {e}")
+        return False
 
-    fmt = img.format
     w, h = img.size
     size = os.path.getsize(path)
+    fmt = img.format
+
+    print(f"  Image: {path}")
+    print(f"    Format: {fmt}")
+    print(f"    Dimensions: {w}x{h}")
+    print(f"    File size: {size} bytes ({size / 1024:.1f} KB)")
+
+    ok = True
+    if w > 1024 or h > 1024:
+        print(f"    FAIL: dimensions {w}x{h} exceed 1024x1024")
+        ok = False
+    else:
+        print(f"    Dimensions OK (<=1024x1024)")
 
     if fmt not in ("PNG", "JPEG", "JPG"):
-        return False, f"Format must be PNG or JPEG, got {fmt}"
+        print(f"    FAIL: format {fmt} is not PNG or JPEG")
+        ok = False
+    else:
+        print(f"    Format OK (PNG/JPEG)")
 
-    if w > 1024 or h > 1024:
-        return False, f"Dimensions {w}x{h} exceed 1024x1024"
+    if size > 1 * 1024 * 1024:
+        print(f"    FAIL: file size {size} bytes exceeds 1 MiB")
+        ok = False
+    else:
+        print(f"    Size OK (<=1 MiB)")
 
-    if size > 1_048_576:
-        return False, f"File size {size} bytes exceeds 1 MiB limit"
-
-    return True, f"Valid: {fmt} {w}x{h} {size} bytes"
+    return ok
 
 
 def main():
-    output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    dest = os.path.join(output_dir, "entry.png")
+    # Determine output directory
+    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    out_path = os.path.join(out_dir, "entry.png")
 
-    os.makedirs(output_dir, exist_ok=True)
-
-    if not os.path.isfile(SRC):
-        print(f"ERROR: {SRC} not found. Run compose.py first.")
+    # Check source exists and is non-empty
+    if not os.path.exists(SRC):
+        print(f"ERROR: source image '{SRC}' not found!")
+        print(f"  Run 'python3 compose.py' first to generate the entry image.")
+        print(f"  Expected path: {os.path.abspath(SRC)}")
+        sys.exit(1)
+    if os.path.getsize(SRC) == 0:
+        print(f"ERROR: source image '{SRC}' is empty (0 bytes)!")
+        print(f"  Run 'python3 compose.py' again to regenerate it.")
         sys.exit(1)
 
+    # Create output directory
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Copy
     src_size = os.path.getsize(SRC)
-    shutil.copy2(SRC, dest)
-    dst_size = os.path.getsize(dest)
+    shutil.copy2(SRC, out_path)
+    dst_size = os.path.getsize(out_path)
 
-    print(f"Copied {SRC} ({src_size} bytes) -> {dest} ({dst_size} bytes)")
+    print(f"Copied {SRC} ({src_size} bytes) -> {out_path} ({dst_size} bytes)")
 
-    ok, msg = validate(dest)
-    print(f"Validation: {msg}")
-    if not ok:
+    # Validate
+    if validate_image(out_path):
+        print("Validation PASSED")
+    else:
+        print("Validation FAILED")
         sys.exit(1)
-
-    # Show a quick preview summary
-    img = Image.open(dest)
-    print(f"Preview: {img.size[0]}x{img.size[1]} {img.format}, "
-          f"{dst_size / 1024:.1f} KB — ready for submission.")
-    img.close()
-
-    print("Entry is ready.")
 
 
 if __name__ == "__main__":

@@ -4,17 +4,18 @@ Compose the final entry image for ai-happy-01.
 Layout (1024x1024):
   - Top ~45%: warm wooden wall with a piece of lined paper taped to it.
     The paper has a handwritten letter (Caveat font).
-  - Bottom ~55%: wooden desk surface with a printed photo of the turtle
-    (cand2-44.jpg) placed like a polaroid — cream border, soft shadow.
+  - Bottom ~55%: wooden desk surface with a printed photo of the sloth Milo
+    (sloth-35.jpg) placed like a polaroid — cream border, soft shadow.
 
 Letter text (exact):
 dear judge,
-i am a turtle. i walked 3 weeks to bring you this flower.
-3 weeks. for a turtle, that is forever.
-i am tired. i am hungry. the flower is yours.
-love, shelby
-p.s. i want a lettuce. a big one. do not argue.
-p.p.s. i am sleeping on your desk. do not move me.
+i started this letter in 2019.
+i finished it today. that is fast for me.
+i knitted you a scarf. it is 2 inches long.
+i worked on it every single day.
+love, milo
+p.s. i will finish the scarf by 2031. do not rush me.
+p.p.s. you are my only friend. i have had exactly one friend. it is you.
 """
 
 import math
@@ -24,7 +25,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 OUTPUT = "entry.png"
 W, H = 1024, 1024
-TURTLE_SRC = "cand2-44.jpg"
+TURTLE_SRC = "candidates/sloth-35.jpg"
 
 # ---- Colour palette ----
 WALL_COLOR   = (215, 180, 135)
@@ -139,7 +140,7 @@ def main():
         font_small = font
 
     # 2. Load turtle photo
-    print(f"  Loading turtle photo: {TURTLE_SRC}")
+    print(f"  Loading sloth photo: {TURTLE_SRC}")
     turtle_img = Image.open(TURTLE_SRC).convert("RGB")
     tw, th = turtle_img.size
     print(f"    Original: {tw}x{th}")
@@ -185,12 +186,13 @@ def main():
     # 6. Letter text
     letter_text = (
         "dear judge,\n\n"
-        "i am a turtle. i walked 3 weeks to bring you this flower.\n\n"
-        "3 weeks. for a turtle, that is forever.\n\n"
-        "i am tired. i am hungry. the flower is yours.\n\n"
-        "love, shelby\n"
-        "p.s. i want a lettuce. a big one. do not argue.\n"
-        "p.p.s. i am sleeping on your desk. do not move me."
+        "i started this letter in 2019.\n\n"
+        "i finished it today. that is fast for me.\n\n"
+        "i knitted you a scarf. it is 2 inches long.\n\n"
+        "i worked on it every single day.\n\n"
+        "love, milo\n"
+        "p.s. i will finish the scarf by 2031. do not rush me.\n"
+        "p.p.s. you are my only friend. i have had exactly one friend. it is you."
     )
 
     text_x = px + 38
@@ -217,8 +219,8 @@ def main():
     draw_tape(draw, px + pw - 90, py - 4, 60, 22, angle=3)
     draw_tape(draw, px + pw // 2 - 30, py + ph - 16, 60, 22, angle=1)
 
-    # 8. Turtle photo on desk (polaroid-style)
-    print("  Placing turtle photo on desk...")
+    # 8. Sloth photo on desk (polaroid-style)
+    print("  Placing sloth photo on desk...")
     # Scale: make it ~520px wide, keep aspect
     photo_w = 560
     aspect = th / tw
