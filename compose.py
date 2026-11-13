@@ -10,10 +10,11 @@ Layout (1024x1024):
 Letter text (exact):
 dear judge,
 i am a turtle. i walked 3 weeks to bring you this flower.
-you never get a real one. so i brought you one.
+3 weeks. for a turtle, that is forever.
+i am tired. i am hungry. the flower is yours.
 love, shelby
-p.s. i wore it on my head. i looked great.
-p.p.s. i live here now. i am slow. you will not notice me.
+p.s. i want a lettuce. a big one. do not argue.
+p.p.s. i am sleeping on your desk. do not move me.
 """
 
 import math
@@ -185,10 +186,11 @@ def main():
     letter_text = (
         "dear judge,\n\n"
         "i am a turtle. i walked 3 weeks to bring you this flower.\n\n"
-        "you never get a real one. so i brought you one.\n\n"
+        "3 weeks. for a turtle, that is forever.\n\n"
+        "i am tired. i am hungry. the flower is yours.\n\n"
         "love, shelby\n"
-        "p.s. i wore it on my head. i looked great.\n"
-        "p.p.s. i live here now. i am slow. you will not notice me."
+        "p.s. i want a lettuce. a big one. do not argue.\n"
+        "p.p.s. i am sleeping on your desk. do not move me."
     )
 
     text_x = px + 38
