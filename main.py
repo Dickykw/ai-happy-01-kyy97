@@ -20,7 +20,7 @@ def validate(path: str) -> bool:
         w, h = img.size
         fmt = img.format
     except Exception as e:
-        print(f"  VALIDATION FAILED: {e}")
+        print(f"  [FAIL] could not open image: {e}")
         return False
 
     checks = []
@@ -57,12 +57,17 @@ def main():
     shutil.copy2(SRC, dst)
     dst_size = os.path.getsize(dst)
 
-    print(f"Copied {SRC} ({src_size} bytes) -> {dst} ({dst_size} bytes)")
+    # Also read the image to print a summary
+    img = Image.open(SRC)
+    w, h = img.size
+    fmt = img.format
+    print(f"Copied {SRC} ({src_size} bytes, {fmt} {w}x{h}) -> {dst} ({dst_size} bytes)")
 
     if not validate(dst):
         sys.exit(1)
 
-    print("Done.")
+    print(f"All checks passed. Entry is ready: {fmt} {w}x{h}, {src_size/1024:.1f} KB.")
+    sys.exit(0)
 
 
 if __name__ == "__main__":

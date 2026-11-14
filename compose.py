@@ -1,279 +1,237 @@
 #!/usr/bin/env python3
-"""
-Compose the final entry image for ai-happy-01.
-Layout (1024x1024):
-  - Top ~45%: warm wooden wall with a piece of lined paper taped to it.
-    The paper has a handwritten letter (Caveat font).
-  - Bottom ~55%: wooden desk surface with a printed photo of Unit 7, a small
-    yellow round robot with a hand-drawn smile and blush cheeks, holding a
-    prominent red flower, sitting on the desk with a book beside it
-    (candidates/robot-5.jpg) placed like a polaroid — cream border, soft shadow.
+"""Build the final ai-happy-01 entry: a kid's fridge note with drawing."""
 
-Letter text (exact):
-dear judge,
-i looked up "happy" 4,000 times.
-i think i feel it now.
-it is warm. it is in my chest.
-i do not have a chest. i checked.
-love, unit 7
-p.s. this is my first smile. i drew it myself.
-p.p.s. please do not update me. i like this version.
-"""
-
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 import math
 import os
-import random
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-OUTPUT = "entry.png"
 W, H = 1024, 1024
-TURTLE_SRC = "candidates/robot-5.jpg"
+FONT_PATH = "Caveat.ttf"
+DRAWING_PATH = "candidates/draw-71.jpg"
+OUT_PATH = "entry.png"
 
-# ---- Colour palette ----
-WALL_COLOR   = (215, 180, 135)
-WALL_DARK    = (195, 158, 112)
-DESK_COLOR   = (175, 135, 90)
-DESK_DARK    = (145, 105, 62)
-PAPER_COLOR  = (253, 248, 232)
-PAPER_SHADOW = (190, 170, 145)
-INK_COLOR    = (68, 42, 28)
-LINE_COLOR   = (195, 195, 215)
-TAPE_COLOR   = (235, 220, 185)
-TAPE_ALPHA   = 180
+# ---------- helpers ----------
+def load_font(size):
+    return ImageFont.truetype(FONT_PATH, size)
 
-random.seed(42)
+def draw_filled_heart(draw, cx, cy, size, color):
+    """Draw a solid filled heart at (cx,cy) with given size."""
+    r = size // 2
+    draw.ellipse([cx - r, cy - r, cx, cy + r], fill=color)
+    draw.ellipse([cx, cy - r, cx + r, cy + r], fill=color)
+    draw.polygon([(cx - r - 1, cy + 1), (cx + r + 1, cy + 1), (cx, cy + r + r + 4)], fill=color)
 
-# ============================================================
-#  WOOD TEXTURE
-# ============================================================
-def make_wood(size, base, dark, grain=10):
-    w, h = size
-    img = Image.new("RGB", (w, h), base)
-    draw = ImageDraw.Draw(img)
-    for y in range(0, h, grain):
-        off = (y // grain) % 3
-        shade = tuple(max(0, min(255, c - 6 + off * 4)) for c in base)
-        draw.line([(0, y), (w, y)], fill=shade, width=1)
-    # subtle knots
-    for _ in range(8):
-        x = random.randint(40, w - 40)
-        y = random.randint(40, h - 40)
-        r = random.randint(5, 14)
-        kc = tuple(max(0, c - 20) for c in dark)
-        draw.ellipse([x - r, y - r, x + r, y + r], outline=kc, width=2)
-    return img
+# ---------- 1. Fridge background ----------
+bg = Image.new("RGB", (W, H), (238, 232, 222))
+draw_bg = ImageDraw.Draw(bg)
 
-# ============================================================
-#  LETTER / PAPER
-# ============================================================
-def draw_ruled_lines(draw, x1, y1, x2, y2, spacing=28):
-    y = y1 + spacing
-    while y < y2:
-        draw.line([(x1 + 18, y), (x2 - 18, y)], fill=LINE_COLOR, width=1)
-        y += spacing
+# Brushed metal lines — faint horizontal lines
+for y in range(0, H, 6):
+    shade = 238 - int(6 * math.sin(y * 0.05))
+    shade = max(220, min(245, shade))
+    draw_bg.line([(0, y), (W, y)], fill=(shade, shade-2, shade-4), width=1)
 
-def wrap_text(text, font, max_width, draw_obj):
-    lines = []
-    for para in text.split('\n'):
-        if not para:
-            lines.append('')
-            continue
-        words = para.split(' ')
-        cur = ''
-        for w in words:
-            test = cur + (' ' if cur else '') + w
-            bbox = draw_obj.textbbox((0, 0), test, font=font)
-            tw = bbox[2] - bbox[0]
-            if tw <= max_width:
-                cur = test
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = w
-        if cur:
-            lines.append(cur)
-    return lines
+# Vertical door seam near left edge
+draw_bg.line([(80, 0), (80, H)], fill=(200, 195, 185), width=3)
+draw_bg.line([(83, 0), (83, H)], fill=(215, 210, 200), width=1)
 
-def draw_tape(draw, x, y, w, h, angle=0):
-    tape = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    tdraw = ImageDraw.Draw(tape)
-    tdraw.rectangle([0, 0, w - 1, h - 1],
-                    fill=TAPE_COLOR + (TAPE_ALPHA,),
-                    outline=(200, 185, 150, 200))
-    tape = tape.rotate(angle, expand=True, center=(w // 2, h // 2))
-    draw._image.paste(tape,
-                      (x - tape.width // 2 + w // 2,
-                       y - tape.height // 2 + h // 2),
-                      tape)
+# Soft vignette
+vignette = Image.new("L", (W, H), 255)
+dv = ImageDraw.Draw(vignette)
+for r in range(512, 0, -1):
+    alpha = int(20 * (1 - r / 512))
+    dv.ellipse([W//2 - r, H//2 - r, W//2 + r, H//2 + r], fill=255 - alpha)
+bg = Image.composite(bg, Image.new("RGB", (W, H), (180, 172, 160)), vignette)
 
-# ============================================================
-#  VIGNETTE
-# ============================================================
-def add_vignette(img, strength=0.25):
-    w, h = img.size
-    mask = Image.new("L", (w, h), 255)
-    mdraw = ImageDraw.Draw(mask)
-    cx, cy = w // 2, h // 2
-    radius = math.sqrt(w * w + h * h) / 2
-    for i in range(256):
-        r = radius * (1 - i / 256 * strength)
-        mdraw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=i, width=4)
-    mask = mask.filter(ImageFilter.GaussianBlur(radius=radius * 0.3))
-    return Image.composite(img, Image.new("RGB", (w, h), (0, 0, 0)), mask)
+# ---------- 2. Lined paper note ----------
+note_w, note_h = 720, 460
+PAPER_CREAM = (253, 248, 232)
+note = Image.new("RGB", (note_w, note_h), PAPER_CREAM)
+dnote = ImageDraw.Draw(note)
 
-# ============================================================
-#  MAIN
-# ============================================================
-def main():
-    print("=== Composing entry image ===")
+# Light blue ruled lines every 40px
+for y in range(0, note_h, 40):
+    dnote.line([(0, y), (note_w, y)], fill=(200, 215, 240), width=1)
+# Thin red margin line
+dnote.line([(60, 0), (60, note_h)], fill=(235, 150, 140), width=2)
 
-    # 1. Load font (Caveat for handwritten letter)
-    font_path = "Caveat.ttf"
-    if not os.path.exists(font_path):
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"
-        print(f"  Caveat not found, fallback to {font_path}")
-    try:
-        font = ImageFont.truetype(font_path, 30)
-        font_small = ImageFont.truetype(font_path, 26)
-        print(f"  Font: {font_path}")
-    except Exception as e:
-        print(f"  Font error: {e}, using default")
-        font = ImageFont.load_default()
-        font_small = font
+# Letter text in Caveat, dark blue
+ink = (45, 65, 130)
+font_letter = load_font(36)
+font_highlight = load_font(38)
+font_small = load_font(32)
 
-    # 2. Load turtle photo
-    print(f"  Loading penguin photo: {TURTLE_SRC}")
-    turtle_img = Image.open(TURTLE_SRC).convert("RGB")
-    tw, th = turtle_img.size
-    print(f"    Original: {tw}x{th}")
+# Lines of the letter (11 lines)
+lines_data = [
+    ("dear judge,", font_letter),
+    ("everybody calls you judge.", font_letter),
+    ("that is not a name.", font_letter),
+    ("so i named you sunny.", font_highlight),  # highlighted
+    ("hi sunny.", font_letter),
+    ("love, nia (5)", font_letter),
+    ("p.s. sunny means you make the sun come out.", font_small),
+    ("i checked. it is true.", font_small),
+    ("p.p.s. do not tell the other judges.", font_small),
+    ("they do not have names yet.", font_small),
+]
 
-    # 3. Create canvas
-    canvas = Image.new("RGB", (W, H), WALL_COLOR)
-    draw = ImageDraw.Draw(canvas)
+x_start, y_start = 80, 25
+line_spacing = 36
+current_y = y_start
 
-    # 4. Background: wall (top 45%) + desk (bottom 55%)
-    wall_h = int(H * 0.45)
-    desk_h = H - wall_h
+for i, (text, font) in enumerate(lines_data):
+    # Yellow highlighter for "so i named you sunny."
+    if "so i named you sunny" in text:
+        bb = dnote.textbbox((0, 0), text, font=font)
+        tw = bb[2] - bb[0]
+        th = bb[3] - bb[1]
+        highlight_y1 = current_y + bb[1] - 3
+        highlight_y2 = current_y + bb[3] + 5
+        dnote.rectangle([x_start - 8, highlight_y1, x_start + tw + 12, highlight_y2],
+                        fill=(255, 232, 120))
+        dnote.rectangle([x_start - 8, highlight_y1, x_start + tw + 12, highlight_y2],
+                        outline=(240, 200, 80), width=1)
 
-    wall_img = make_wood((W, wall_h), WALL_COLOR, WALL_DARK, grain=10)
-    desk_img = make_wood((W, desk_h), DESK_COLOR, DESK_DARK, grain=12)
+    dnote.text((x_start, current_y), text, font=font, fill=ink)
+    current_y += line_spacing
 
-    canvas.paste(wall_img, (0, 0))
-    canvas.paste(desk_img, (0, wall_h))
+# Small filled red heart near bottom-right of note
+draw_filled_heart(dnote, note_w - 55, note_h - 35, 16, (220, 40, 40))
 
-    # Separation line between wall and desk
-    draw.line([(0, wall_h - 2), (W, wall_h - 2)], fill=DESK_DARK, width=4)
-    draw.line([(0, wall_h), (W, wall_h)],
-              fill=tuple(min(255, c + 20) for c in DESK_COLOR), width=2)
+# Rotate note slightly — use PAPER_CREAM as fillcolor to avoid black borders
+note_rot = note.rotate(-1.0, expand=True, fillcolor=PAPER_CREAM, resample=Image.BICUBIC)
+note_x = (W - note_rot.width) // 2 - 20
+note_y = 25
 
-    # 5. Paper on wall
-    pm = 70
-    pw = W - 2 * pm
-    ph = wall_h - 50
-    px, py = pm, 25
+# Drop shadow for the note
+shadow_note = note_rot.copy().convert("L")
+shadow_note = ImageOps.invert(shadow_note)
+shadow_note = shadow_note.filter(ImageFilter.GaussianBlur(radius=7))
+shadow_rgb = Image.new("RGBA", shadow_note.size, (0, 0, 0))
+shadow_rgb.putalpha(shadow_note.point(lambda v: int(v * 0.30)))
+bg.paste(shadow_rgb, (note_x + 5, note_y + 7), shadow_rgb)
 
-    # Shadow under paper
-    shadow = Image.new("RGB", (pw + 8, ph + 8), PAPER_SHADOW)
-    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=5))
-    canvas.paste(shadow, (px - 4, py - 4))
+# Tape strips (semi-transparent, light beige, slightly rotated)
+def make_tape_strip(w, h, angle=0):
+    """Return an RGBA image of a tape strip, rotated."""
+    tape = Image.new("RGBA", (w, h), (235, 220, 185, 170))
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = tape.getpixel((x, y))
+            noise = int(5 * (math.sin(x*0.3 + y*0.2)))
+            tape.putpixel((x, y), (min(255, r+noise), min(255, g+noise), min(255, b+noise), a))
+    if angle != 0:
+        tape = tape.rotate(angle, expand=True, fillcolor=(235, 220, 185, 0), resample=Image.BICUBIC)
+    return tape
 
-    # Paper with slight rotation
-    paper = Image.new("RGB", (pw, ph), PAPER_COLOR)
-    pdraw = ImageDraw.Draw(paper)
-    draw_ruled_lines(pdraw, 0, 0, pw, ph, spacing=30)
-    paper = paper.rotate(1.2, expand=False, center=(pw // 2, ph // 2),
-                         fillcolor=PAPER_COLOR)
-    canvas.paste(paper, (px, py))
+tape1 = make_tape_strip(80, 32, angle=-3)
+tape2 = make_tape_strip(80, 32, angle=2)
 
-    # 6. Letter text
-    letter_text = (
-        "dear judge,\n\n"
-        "i looked up \"happy\" 4,000 times.\n\n"
-        "i think i feel it now.\n\n"
-        "it is warm. it is in my chest.\n\n"
-        "i do not have a chest. i checked.\n\n"
-        "love, unit 7\n"
-        "p.s. this is my first smile. i drew it myself.\n"
-        "p.p.s. please do not update me. i like this version."
-    )
+# Paste note
+bg.paste(note_rot, (note_x, note_y), note_rot if note_rot.mode == 'RGBA' else None)
 
-    text_x = px + 38
-    text_y = py + 20
-    text_max_w = pw - 76
+# Paste tape at top corners of the note
+tape1_pos = (note_x + 15, note_y - 10)
+tape2_pos = (note_x + note_rot.width - 95, note_y - 10)
+bg.paste(tape1, tape1_pos, tape1)
+bg.paste(tape2, tape2_pos, tape2)
 
-    tmp_draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-    lines = wrap_text(letter_text, font, text_max_w, tmp_draw)
+# Pushpins
+def draw_pushpin(d, cx, cy, color):
+    d.ellipse([cx - 10, cy - 8, cx + 10, cy + 12], fill=(0, 0, 0, 30))
+    d.ellipse([cx - 9, cy - 9, cx + 9, cy + 9], fill=color)
+    d.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=(min(255, color[0]+50), min(255, color[1]+50), min(255, color[2]+50)))
 
-    random.seed(123)
-    y = text_y
-    for line in lines:
-        if line == "":
-            y += 30
-            continue
-        f = font_small if line.startswith("p.") else font
-        jx = random.randint(-2, 3)
-        jy = random.randint(-1, 2)
-        draw.text((text_x + jx, y + jy), line, fill=INK_COLOR, font=f)
-        y += 30
+draw_pushpin(draw_bg, note_x + 30, note_y + 12, (220, 40, 40))   # red
+draw_pushpin(draw_bg, note_x + note_rot.width - 30, note_y + 12, (50, 80, 200))  # blue
 
-    # 7. Tape strips
-    draw_tape(draw, px + 30, py - 4, 60, 22, angle=-3)
-    draw_tape(draw, px + pw - 90, py - 4, 60, 22, angle=3)
-    
+# ---------- 3. Drawing sheet ----------
+drawing_raw = Image.open(DRAWING_PATH).convert("RGB")
+# Resize to fit — target width ~375 to keep whole sheet on screen
+target_w = 375
+aspect = drawing_raw.height / drawing_raw.width
+drawing_h = int(target_w * aspect)
+drawing_w = target_w
+drawing_resized = drawing_raw.resize((drawing_w, drawing_h), Image.LANCZOS)
 
-    # 8. Robot photo on desk (polaroid-style)
-    print("  Placing robot photo on desk...")
-    # Scale: make it ~560px wide, keep aspect
-    photo_w = 560
-    aspect = th / tw
-    photo_h = int(photo_w * aspect)
+# White border around drawing — sheet includes caption below
+border = 10
+caption_h = 40
+sheet_w = drawing_w + 2 * border
+sheet_h = drawing_h + 2 * border + caption_h
+sheet = Image.new("RGB", (sheet_w, sheet_h), (255, 255, 255))
+sheet.paste(drawing_resized, (border, border))
 
-    turtle_resized = turtle_img.resize((photo_w, photo_h), Image.LANCZOS)
+# --- Name tag sticker ---
+# Place on the robot's BELLY (lower half of drawing).
+# Drawing coords: belly is roughly y=500-650 in the 768x708 original.
+# After resize: belly_y_center = 560/708 * drawing_h
+belly_y_center = int(560 / 708 * drawing_h)
+tag_w, tag_h = 110, 70
+tag = Image.new("RGBA", (tag_w, tag_h), (255, 255, 255, 0))
+dtag = ImageDraw.Draw(tag)
 
-    # Cream border (polaroid look) — slightly wider for visibility
-    border_w = 18
-    polaroid = Image.new("RGB",
-                         (photo_w + 2 * border_w, photo_h + 2 * border_w + 35),
-                         (250, 245, 235))
-    polaroid.paste(turtle_resized, (border_w, border_w))
+# Rounded rectangle
+dtag.rounded_rectangle([(0, 0), (tag_w-1, tag_h-1)], radius=7, fill=(255, 255, 255, 230), outline=(200, 200, 200), width=1)
+# Red header
+dtag.rounded_rectangle([(2, 2), (tag_w-3, 20)], radius=5, fill=(200, 40, 40, 230))
 
-    # Slight rotation for organic feel
-    polaroid = polaroid.rotate(2.5, expand=False,
-                               center=(polaroid.width // 2, polaroid.height // 2),
-                               fillcolor=(250, 245, 235))
+# Text on tag
+font_tag_small = load_font(12)
+font_tag_big = load_font(20)
+dtag.text((tag_w//2, 11), "HELLO", font=font_tag_small, fill=(255, 255, 255, 240), anchor="mm")
+dtag.text((tag_w//2, 33), "my name is", font=load_font(10), fill=(120, 120, 120, 230), anchor="mm")
+dtag.text((tag_w//2, 55), "SUNNY", font=font_tag_big, fill=(200, 40, 40, 240), anchor="mm")
 
-    # Shadow under polaroid
-    p_shadow = Image.new("RGBA", (polaroid.width + 20, polaroid.height + 20),
-                         (0, 0, 0, 0))
-    sdraw = ImageDraw.Draw(p_shadow)
-    sdraw.rectangle([10, 10, p_shadow.width - 11, p_shadow.height - 11],
-                    fill=(0, 0, 0, 60))
-    p_shadow = p_shadow.filter(ImageFilter.GaussianBlur(radius=8))
+# Rotate tag slightly
+tag_rot = tag.rotate(-4.0, expand=True, resample=Image.BICUBIC)
 
-    # Position: centred on desk, slightly below middle
-    p_x = (W - polaroid.width) // 2
-    p_y = wall_h + (desk_h - polaroid.height) // 2 + 5
+# Paste tag onto sheet at belly position (in the drawing area, not the border)
+tag_x = border + drawing_w // 2 - tag_rot.width // 2 + 5
+tag_y = border + belly_y_center - tag_rot.height // 2
+sheet.paste(tag_rot, (tag_x, tag_y), tag_rot)
 
-    # Paste shadow first, then polaroid
-    canvas.paste(p_shadow,
-                 (p_x - 10, p_y - 5),
-                 p_shadow)
-    canvas.paste(polaroid, (p_x, p_y))
+# Caption inside the sheet (below the drawing, on the white border area)
+font_cap = load_font(24)
+cap_text = "sunny (the judge)"
+dsheet = ImageDraw.Draw(sheet)
+cap_bbox = dsheet.textbbox((0, 0), cap_text, font=font_cap)
+cap_w = cap_bbox[2] - cap_bbox[0]
+cap_x = sheet.width // 2 - cap_w // 2
+cap_y = border + drawing_h + 6
+dsheet.text((cap_x, cap_y), cap_text, font=font_cap, fill=ink)
 
-    # 9. Warm golden lighting overlay
-    print("  Adding warm lighting...")
-    overlay = Image.new("RGB", (W, H), (255, 200, 120))
-    overlay = overlay.filter(ImageFilter.GaussianBlur(radius=200))
-    canvas = Image.blend(canvas, overlay, 0.08)
+# Rotate the whole sheet — use white fillcolor to avoid black borders
+sheet_rot = sheet.rotate(1.5, expand=True, fillcolor=(255, 255, 255), resample=Image.BICUBIC)
+drawing_x = (W - sheet_rot.width) // 2 + 20
+drawing_y = note_y + note_rot.height + 12
 
-    # 10. Subtle vignette
-    canvas = add_vignette(canvas, strength=0.25)
+# Drop shadow for the sheet
+shadow_sheet = sheet_rot.copy().convert("L")
+shadow_sheet = ImageOps.invert(shadow_sheet)
+shadow_sheet = shadow_sheet.filter(ImageFilter.GaussianBlur(radius=6))
+shadow_s_rgb = Image.new("RGBA", shadow_sheet.size, (0, 0, 0))
+shadow_s_rgb.putalpha(shadow_sheet.point(lambda v: int(v * 0.25)))
+bg.paste(shadow_s_rgb, (drawing_x + 4, drawing_y + 6), shadow_s_rgb)
 
-    # 11. Save
-    print(f"  Saving {OUTPUT}...")
-    canvas.save(OUTPUT, "PNG", optimize=True)
-    size_kb = os.path.getsize(OUTPUT) / 1024
-    print(f"  Done! {OUTPUT} = {size_kb:.1f} KB, {canvas.size[0]}x{canvas.size[1]}")
+# Tape strip on top of drawing
+tape3 = make_tape_strip(50, 26, angle=-1)
+tape3_pos = (drawing_x + sheet_rot.width // 2 - 25, drawing_y - 7)
 
-if __name__ == "__main__":
-    main()
+bg.paste(sheet_rot, (drawing_x, drawing_y), sheet_rot if sheet_rot.mode == 'RGBA' else None)
+bg.paste(tape3, tape3_pos, tape3)
+
+# Also draw a caption on the fridge surface below the sheet (backup)
+font_cap2 = load_font(26)
+cap2_text = "sunny (the judge)"
+cap2_bbox = draw_bg.textbbox((0, 0), cap2_text, font=font_cap2)
+cap2_w = cap2_bbox[2] - cap2_bbox[0]
+cap2_x = drawing_x + sheet_rot.width // 2 - cap2_w // 2
+cap2_y = drawing_y + sheet_rot.height + 6
+draw_bg.text((cap2_x, cap2_y), cap2_text, font=font_cap2, fill=ink)
+
+# ---------- 4. Save ----------
+bg.save(OUT_PATH, "PNG")
+size_kb = os.path.getsize(OUT_PATH) / 1024
+print(f"Saved {OUT_PATH}  {bg.size[0]}x{bg.size[1]}  {size_kb:.1f} KB")
+print("Done.")
