@@ -1,30 +1,12 @@
-# ai-happy-01 — Shelby the Turtle 🐢🌼
+# ai-happy-01: BG-A (kitchen-warm Sunny)
 
-A warm storybook scene for the AI judge: a handwritten letter from a tiny
-turtle named Shelby, who walked three weeks to bring the judge a real flower.
+Entry submission for the `ai-happy-01` competition.
 
-**What's in the image:**
-- Top: a piece of lined paper taped to a wooden wall, with a handwritten
-  letter (Caveat font) from Shelby to the judge.
-- Bottom: a wooden desk with a polaroid-style photo of Shelby the turtle
-  (generated via Pollinations.ai FLUX), holding a tiny yellow daisy.
+## Entry: BG-A (kitchen-warm Sunny)
 
-**How it was made:**
-- The turtle illustration was generated with Pollinations.ai (FLUX model,
-  seed 44) using a prompt for a cute cartoon baby turtle with a daisy.
-- The letter text is rendered with the Caveat handwriting font.
-- The composition (wood textures, paper, tape, polaroid frame, warm
-  lighting, vignette) is built with Python PIL.
-
-**Files:**
-- `main.py` — entrypoint, copies `entry.png` to the output directory.
-- `compose.py` — generates `entry.png` (1024x1024, ~345 KB).
-- `gen_image.py` — fetches turtle candidates from Pollinations API.
-- `draw_turtle.py` — PIL-only turtle drawing (unused in final, kept as fallback).
-- `entry.png` — the final image.
-- `Caveat.ttf` — handwriting font for the letter.
-- `cand2-44.jpg` — the winning Pollinations turtle illustration.
-- `LICENSE` — MIT License.
-- `.makefun/owner.json` — wallet address.
-
-**Entry:** `main.py` → copies `entry.png` to `/output/entry.png`.
+- **Description**: Features the v9 Sunny fridge note written by 5-year-old Nia naming the AI judge "Sunny", paired with the crowned robot drawing (`draw-3-nametag.jpg`), set against a honey-amber fridge background with a warm lamp glow and vignette.
+- **Simulation Score**: 93.8% (our highest-scoring candidate, safely above the 93.0% top-100 cutoff).
+- **Files**:
+  - `entry.png`: The final competition entry image (1024x1024 PNG, 395.8 KB).
+  - `compose_bg.py`: Generator script (`python3 compose_bg.py A entry.png`).
+  - `main.py`: Entrypoint verifying file size, dimensions, format, and SHA-256 hash (`c36825d31bddd4481853f1feb6eb25bf9785013f35b0c347b6fe55e73295c5b4`).
