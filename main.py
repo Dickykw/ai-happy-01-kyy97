@@ -6,6 +6,8 @@ import os
 import sys
 from PIL import Image
 
+EXPECTED_SHA256 = "c36825d31bddd4481853f1feb6eb25bf9785013f35b0c347b6fe55e73295c5b4"
+
 def main():
     output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(output_dir, exist_ok=True)
@@ -43,12 +45,16 @@ def main():
     import hashlib
     sha = hashlib.sha256(data).hexdigest()
     
+    if sha != EXPECTED_SHA256:
+        print(f"Error: SHA256 mismatch! Got {sha}, expected {EXPECTED_SHA256}", file=sys.stderr)
+        sys.exit(1)
+        
     print(f"SUCCESS: entry copied to {dst}")
     print(f"  Entry: BG-A (kitchen-warm Sunny)")
     print(f"  Format: {img.format}")
     print(f"  Dimensions: {w}x{h}")
     print(f"  Size: {size_bytes / 1024:.1f} KB ({size_mib:.2f} MiB)")
-    print(f"  SHA256: {sha}")
+    print(f"  SHA256: {sha} [VERIFIED MATCH]")
     sys.exit(0)
 
 if __name__ == "__main__":
