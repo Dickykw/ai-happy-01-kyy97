@@ -1,74 +1,55 @@
 #!/usr/bin/env python3
+"""main.py: make.fun competition entrypoint for ai-happy-01 BG-A (kitchen-warm Sunny).
+Copies entry.png to $MAKEFUN_OUTPUT_DIR/entry.png and validates dimensions/size/format.
 """
-Entrypoint for ai-happy-01.
-Copies entry.png to the output directory and validates it.
-"""
-
 import os
-import shutil
 import sys
 from PIL import Image
 
-SRC = "entry.png"
-
-
-def validate(path: str) -> bool:
-    """Validate that the output file meets all constraints."""
-    try:
-        size = os.path.getsize(path)
-        img = Image.open(path)
-        w, h = img.size
-        fmt = img.format
-    except Exception as e:
-        print(f"  [FAIL] could not open image: {e}")
-        return False
-
-    checks = []
-    # Max 1 MiB
-    size_ok = size <= 1_048_576
-    checks.append(("size ≤ 1 MiB", f"{size/1024:.1f} KB", size_ok))
-    # Max 1024x1024
-    dim_ok = w <= 1024 and h <= 1024
-    checks.append(("dimensions ≤ 1024x1024", f"{w}x{h}", dim_ok))
-    # Must be PNG or JPEG
-    fmt_ok = fmt in ("PNG", "JPEG", "JPG")
-    checks.append(("format PNG/JPEG", str(fmt), fmt_ok))
-
-    all_ok = True
-    for label, value, passed in checks:
-        status = "PASS" if passed else "FAIL"
-        print(f"  [{status}] {label}: {value}")
-        if not passed:
-            all_ok = False
-
-    return all_ok
-
-
 def main():
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    dst = os.path.join(out_dir, "entry.png")
-
-    if not os.path.isfile(SRC):
-        print(f"ERROR: source file '{SRC}' not found in {os.getcwd()}")
+    output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    os.makedirs(output_dir, exist_ok=True)
+    
+    src = "entry.png"
+    dst = os.path.join(output_dir, "entry.png")
+    
+    if not os.path.exists(src):
+        print(f"Error: source {src} not found.", file=sys.stderr)
         sys.exit(1)
-
-    src_size = os.path.getsize(SRC)
-    shutil.copy2(SRC, dst)
-    dst_size = os.path.getsize(dst)
-
-    # Also read the image to print a summary
-    img = Image.open(SRC)
+        
+    # Read and copy
+    with open(src, "rb") as f:
+        data = f.read()
+    with open(dst, "wb") as f:
+        f.write(data)
+        
+    # Validate
+    size_bytes = len(data)
+    size_mib = size_bytes / (1024 * 1024)
+    if size_mib > 1.0:
+        print(f"Error: file size {size_mib:.2f} MiB exceeds 1 MiB limit.", file=sys.stderr)
+        sys.exit(1)
+        
+    img = Image.open(dst)
     w, h = img.size
-    fmt = img.format
-    print(f"Copied {SRC} ({src_size} bytes, {fmt} {w}x{h}) -> {dst} ({dst_size} bytes)")
-
-    if not validate(dst):
+    if w > 1024 or h > 1024:
+        print(f"Error: dimensions {w}x{h} exceed 1024x1024 limit.", file=sys.stderr)
         sys.exit(1)
-
-    print(f"All checks passed. Entry is ready: {fmt} {w}x{h}, {src_size/1024:.1f} KB.")
+        
+    if img.format not in ("PNG", "JPEG"):
+        print(f"Error: format {img.format} is not PNG or JPEG.", file=sys.stderr)
+        sys.exit(1)
+        
+    import hashlib
+    sha = hashlib.sha256(data).hexdigest()
+    
+    print(f"SUCCESS: entry copied to {dst}")
+    print(f"  Entry: BG-A (kitchen-warm Sunny)")
+    print(f"  Format: {img.format}")
+    print(f"  Dimensions: {w}x{h}")
+    print(f"  Size: {size_bytes / 1024:.1f} KB ({size_mib:.2f} MiB)")
+    print(f"  SHA256: {sha}")
     sys.exit(0)
-
 
 if __name__ == "__main__":
     main()
